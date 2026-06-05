@@ -1,8 +1,7 @@
-export type PaintingStyle =
-  | "Classic Oil Portrait"
-  | "Warm Vintage Oil Painting"
-  | "Royal Portrait"
-  | "Impressionist Oil Painting";
+import { paintingStyles } from "@/lib/ai/styles";
+import type { PaintingPreview, PaintingStyle } from "@/lib/ai/types";
+
+export type { PaintingPreview, PaintingStyle };
 
 export type PaintingSize = "8x10" | "12x16" | "16x20" | "24x36";
 
@@ -10,6 +9,8 @@ export type FrameOption = "No frame" | "Black frame" | "Gold frame";
 
 export type OrderDraft = {
   uploadedImage?: string;
+  generatedPreviews?: PaintingPreview[];
+  previewError?: string;
   style?: PaintingStyle;
   size?: PaintingSize;
   frame?: FrameOption;
@@ -17,12 +18,7 @@ export type OrderDraft = {
 
 export const orderDraftKey = "atelier-ai-order-draft";
 
-export const styles: PaintingStyle[] = [
-  "Classic Oil Portrait",
-  "Warm Vintage Oil Painting",
-  "Royal Portrait",
-  "Impressionist Oil Painting",
-];
+export const styles: PaintingStyle[] = paintingStyles;
 
 export const sizes: PaintingSize[] = ["8x10", "12x16", "16x20", "24x36"];
 
