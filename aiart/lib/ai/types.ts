@@ -7,7 +7,7 @@ export type PaintingStyle =
 export type PaintingPreview = {
   style: PaintingStyle;
   imageUrl: string;
-  provider: "replicate" | "openai" | "google";
+  provider: "replicate" | "openai" | "google" | "gemini";
   providerLabel: string;
   durationSeconds: number;
   slotIndex: number;

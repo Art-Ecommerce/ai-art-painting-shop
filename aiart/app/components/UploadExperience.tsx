@@ -3,10 +3,12 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  getStorageSafePreviews,
   PaintingPreview,
   readOrderDraft,
   writeOrderDraft,
 } from "@/app/lib/order-flow";
+import { setTransientGeneratedPreviews } from "@/app/lib/transient-preview-store";
 
 const maxImageDataUrlLength = 8_000_000;
 
@@ -55,6 +57,7 @@ export function UploadExperience() {
         return;
       }
 
+      setTransientGeneratedPreviews([]);
       setError("");
       setPreview(uploadedImage);
       // TODO: Store the original photo and draft metadata in Supabase.
@@ -104,10 +107,11 @@ export function UploadExperience() {
         throw new Error(result.error ?? "AI preview generation failed.");
       }
 
+      setTransientGeneratedPreviews(result.previews);
       writeOrderDraft({
         ...readOrderDraft(),
         uploadedImage: preview,
-        generatedPreviews: result.previews,
+        generatedPreviews: getStorageSafePreviews(result.previews),
         previewError: undefined,
       });
     } catch (generationError) {

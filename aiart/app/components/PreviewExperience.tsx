@@ -15,6 +15,7 @@ import {
   styles,
   writeOrderDraft,
 } from "@/app/lib/order-flow";
+import { getTransientGeneratedPreviews } from "@/app/lib/transient-preview-store";
 
 const previewClasses = [
   "bg-[radial-gradient(circle_at_50%_24%,#f0c987_0_13%,transparent_14%),radial-gradient(circle_at_48%_45%,#8c5a37_0_20%,transparent_21%),linear-gradient(145deg,#25130e,#765334_55%,#d6b47b)]",
@@ -26,7 +27,7 @@ const previewClasses = [
 const modelSlots = [
   "OpenAI GPT Image 2 via Replicate",
   "Google Nano Banana via Replicate",
-  "Replicate model slot",
+  "Google Nano Banana directly",
   "Placeholder slot",
 ];
 
@@ -54,13 +55,18 @@ export function PreviewExperience() {
       }
 
       const draft = readOrderDraft();
+      const transientPreviews = getTransientGeneratedPreviews();
+      const availablePreviews = transientPreviews.length
+        ? transientPreviews
+        : draft.generatedPreviews ?? [];
+
       setUploadedImage(draft.uploadedImage ?? "");
       setSelectedStyle(draft.style ?? "Classic Oil Portrait");
       setSelectedSize(draft.size ?? "12x16");
       setSelectedFrame(draft.frame ?? "No frame");
-      setGeneratedPreviews(draft.generatedPreviews ?? []);
+      setGeneratedPreviews(availablePreviews);
       setPreviewError(draft.previewError ?? "");
-      setSelectedPreviewSlot(draft.generatedPreviews?.[0]?.slotIndex);
+      setSelectedPreviewSlot(availablePreviews[0]?.slotIndex);
     });
 
     return () => {

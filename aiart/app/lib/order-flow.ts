@@ -65,3 +65,11 @@ export function readOrderDraft(): OrderDraft {
 export function writeOrderDraft(draft: OrderDraft) {
   window.sessionStorage.setItem(orderDraftKey, JSON.stringify(draft));
 }
+
+export function isLargeInlineImage(imageUrl: string) {
+  return imageUrl.startsWith("data:image/");
+}
+
+export function getStorageSafePreviews(previews?: PaintingPreview[]) {
+  return previews?.filter((preview) => !isLargeInlineImage(preview.imageUrl));
+}

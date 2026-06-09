@@ -38,6 +38,10 @@ export async function POST(request: Request) {
     return errorResponse("AI image generation is not configured.", 500);
   }
 
+  if (process.env.AI_PROVIDER === "gemini" && !process.env.GEMINI_API_KEY) {
+    return errorResponse("Gemini image generation is not configured.", 500);
+  }
+
   try {
     const previews = await generatePaintingPreviews({
       imageDataUrl: body.imageDataUrl,
