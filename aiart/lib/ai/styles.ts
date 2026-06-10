@@ -4,7 +4,7 @@ export const paintingStylePrompts: PaintingStylePrompt[] = [
   {
     style: "Classic Oil Portrait",
     prompt:
-      "Transform the reference image into a classic museum-quality oil portrait. Preserve the subject identity, pose, facial structure, and important details. Use refined brushwork, realistic skin tones, canvas texture, and timeless studio lighting.",
+      "Transform this image into a high-quality classical oil portrait while preserving the original subject, facial likeness, pose, composition, and overall expression. Create the result as a refined, realistic hand-painted oil painting with elegant, visible brushwork, rich layered texture, and a timeless fine-art appearance. Use warm studio lighting, Rembrandt-inspired depth and shadow, soft but detailed rendering, and a tasteful, elegant background.\n\nThe painting should feel like a professionally commissioned traditional portrait, with natural skin tones, subtle impasto texture, realistic proportions, and a premium canvas look. Enhance depth, lighting, and atmosphere while keeping the subject realistic, dignified, and visually flattering. The final result should look like a museum-quality or gallery-quality oil painting suitable for printing and framing.\n\nAvoid cartoon style, anime style, watercolor, acrylic look, sketch style, digital illustration, flat shading, exaggerated features, distorted face, inaccurate likeness, extra fingers, malformed hands, unnatural pose, blurry details, plastic skin, over-smoothed textures, messy brushstrokes, low-resolution appearance, overly dark shadows, harsh lighting, washed-out colors, unrealistic colors, background clutter, and obvious AI artifacts.",
   },
   {
     style: "Warm Vintage Oil Painting",

@@ -28,7 +28,7 @@ const modelSlots = [
   "OpenAI GPT Image 2 via Replicate",
   "Google Nano Banana via Replicate",
   "Google Nano Banana directly",
-  "Placeholder slot",
+  "Google Nano Banana Pro directly",
 ];
 
 export function PreviewExperience() {

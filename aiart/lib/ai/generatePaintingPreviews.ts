@@ -101,6 +101,26 @@ export async function generatePaintingPreviews(
     }
   }
 
+  if (shouldGenerateDirectGeminiPreview()) {
+    const preview = await tryGenerateTimedPreview({
+      imageDataUrl: input.imageDataUrl,
+      slotIndex: 3,
+      provider: geminiPaintingProvider.provider,
+      providerLabel: "Google Nano Banana Pro directly",
+      style: firstStylePrompt.style,
+      generatePreview: () =>
+        geminiPaintingProvider.generatePreview({
+          imageDataUrl: input.imageDataUrl,
+          stylePrompt: firstStylePrompt,
+          slotIndex: 3,
+        }),
+    });
+
+    if (preview) {
+      previews.push(preview);
+    }
+  }
+
   if (!previews.length) {
     throw new Error("No AI providers returned a preview.");
   }
