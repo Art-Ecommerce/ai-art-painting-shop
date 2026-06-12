@@ -8,8 +8,11 @@ export type PaintingSize = "8x10" | "12x16" | "16x20" | "24x36";
 export type FrameOption = "No frame" | "Black frame" | "Gold frame";
 
 export type OrderDraft = {
+  projectId?: string;
   uploadedImage?: string;
+  originalImageUrl?: string;
   generatedPreviews?: PaintingPreview[];
+  selectedPreviewUrl?: string;
   previewError?: string;
   style?: PaintingStyle;
   size?: PaintingSize;

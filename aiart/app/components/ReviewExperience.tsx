@@ -8,6 +8,16 @@ import {
   readOrderDraft,
 } from "@/app/lib/order-flow";
 
+type SavedArtworkProject = {
+  id: string;
+  original_image_url?: string | null;
+  selected_preview_url?: string | null;
+  selected_style?: string | null;
+  selected_size?: string | null;
+  selected_frame?: string | null;
+  estimated_price?: number | null;
+};
+
 export function ReviewExperience() {
   const [draft, setDraft] = useState<OrderDraft>({});
 
@@ -16,9 +26,51 @@ export function ReviewExperience() {
 
     queueMicrotask(() => {
       if (isMounted) {
-        setDraft(readOrderDraft());
+        const localDraft = readOrderDraft();
+        setDraft(localDraft);
+
+        if (localDraft.projectId) {
+          void loadSavedProject(localDraft.projectId, localDraft);
+        }
       }
     });
+
+    async function loadSavedProject(projectId: string, localDraft: OrderDraft) {
+      try {
+        const response = await fetch(`/api/artwork-projects?projectId=${projectId}`);
+
+        if (!response.ok) {
+          throw new Error("Project load failed.");
+        }
+
+        const result = (await response.json()) as {
+          project?: SavedArtworkProject;
+        };
+
+        if (!isMounted || !result.project) {
+          return;
+        }
+
+        setDraft({
+          ...localDraft,
+          originalImageUrl:
+            result.project.original_image_url ?? localDraft.originalImageUrl,
+          selectedPreviewUrl:
+            result.project.selected_preview_url ?? localDraft.selectedPreviewUrl,
+          style: (result.project.selected_style ?? localDraft.style) as
+            | OrderDraft["style"]
+            | undefined,
+          size: (result.project.selected_size ?? localDraft.size) as
+            | OrderDraft["size"]
+            | undefined,
+          frame: (result.project.selected_frame ?? localDraft.frame) as
+            | OrderDraft["frame"]
+            | undefined,
+        });
+      } catch {
+        // Keep local review flow working if Supabase is unavailable.
+      }
+    }
 
     return () => {
       isMounted = false;
@@ -26,16 +78,18 @@ export function ReviewExperience() {
   }, []);
 
   const price = getEstimatedPrice(draft.size, draft.frame);
+  const reviewImageUrl =
+    draft.selectedPreviewUrl ?? draft.originalImageUrl ?? draft.uploadedImage;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <section className="rounded-lg bg-stone-950 p-4 shadow-xl">
         <div className="flex min-h-[560px] items-center justify-center overflow-hidden rounded-md bg-[#211711]">
-          {draft.uploadedImage ? (
+          {reviewImageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={draft.uploadedImage}
-              alt="Uploaded painting reference"
+              src={reviewImageUrl}
+              alt="Selected painting preview"
               className="h-full max-h-[680px] w-full object-contain"
             />
           ) : (

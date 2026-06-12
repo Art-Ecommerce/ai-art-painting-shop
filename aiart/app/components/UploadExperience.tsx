@@ -18,6 +18,7 @@ export function UploadExperience() {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSavingProject, setIsSavingProject] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -36,6 +37,41 @@ export function UploadExperience() {
       isMounted = false;
     };
   }, []);
+
+  async function createArtworkProject(uploadedImage: string) {
+    setIsSavingProject(true);
+
+    try {
+      const response = await fetch("/api/artwork-projects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ imageDataUrl: uploadedImage }),
+      });
+      const result = (await response.json()) as {
+        projectId?: string;
+        originalImageUrl?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !result.projectId || !result.originalImageUrl) {
+        throw new Error(result.error ?? "Supabase project creation failed.");
+      }
+
+      writeOrderDraft({
+        ...readOrderDraft(),
+        projectId: result.projectId,
+        originalImageUrl: result.originalImageUrl,
+      });
+    } catch {
+      setError(
+        "We could not save this project yet. You can keep using the local demo flow.",
+      );
+    } finally {
+      setIsSavingProject(false);
+    }
+  }
 
   function handleImageChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -63,10 +99,14 @@ export function UploadExperience() {
       // TODO: Store the original photo and draft metadata in Supabase.
       writeOrderDraft({
         ...readOrderDraft(),
+        projectId: undefined,
         uploadedImage,
+        originalImageUrl: undefined,
         generatedPreviews: undefined,
+        selectedPreviewUrl: undefined,
         previewError: undefined,
       });
+      void createArtworkProject(uploadedImage);
     };
 
     reader.readAsDataURL(file);
@@ -95,7 +135,10 @@ export function UploadExperience() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ imageDataUrl: preview }),
+        body: JSON.stringify({
+          imageDataUrl: preview,
+          projectId: readOrderDraft().projectId,
+        }),
       });
 
       const result = (await response.json()) as {
@@ -162,11 +205,19 @@ export function UploadExperience() {
         <button
           type="button"
           onClick={handleGeneratePreviews}
-          disabled={!preview || isGenerating}
+          disabled={!preview || isGenerating || isSavingProject}
           className="mt-6 w-full rounded-full bg-stone-950 px-6 py-4 font-semibold text-white transition hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-300"
         >
-          {isGenerating ? "Generating previews..." : "Generate previews"}
+          {isSavingProject
+            ? "Saving project..."
+            : isGenerating
+              ? "Generating previews..."
+              : "Generate previews"}
         </button>
+
+        {isSavingProject ? (
+          <p className="mt-3 text-sm text-stone-500">Saving project...</p>
+        ) : null}
 
         {error ? (
           <p className="mt-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">

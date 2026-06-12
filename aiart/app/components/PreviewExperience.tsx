@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   FrameOption,
+  OrderDraft,
   PaintingSize,
   PaintingStyle,
   frames,
@@ -30,6 +31,20 @@ const modelSlots = [
   "Google Nano Banana directly",
   "Google Nano Banana Pro directly",
 ];
+
+const savedPreviewLabels = modelSlots;
+
+type SavedGeneratedImage = {
+  image_url: string;
+  style_name?: string | null;
+};
+
+function getSlotIndexFromUrl(imageUrl: string, fallbackIndex: number) {
+  const filename = imageUrl.split("/").pop() ?? "";
+  const slotMatch = filename.match(/^(\d+)-/);
+
+  return slotMatch ? Number(slotMatch[1]) : fallbackIndex;
+}
 
 export function PreviewExperience() {
   const router = useRouter();
@@ -67,7 +82,50 @@ export function PreviewExperience() {
       setGeneratedPreviews(availablePreviews);
       setPreviewError(draft.previewError ?? "");
       setSelectedPreviewSlot(availablePreviews[0]?.slotIndex);
+
+      if (!transientPreviews.length && draft.projectId) {
+        void loadSavedPreviews(draft.projectId);
+      }
     });
+
+    async function loadSavedPreviews(projectId: string) {
+      try {
+        const response = await fetch(`/api/artwork-projects?projectId=${projectId}`);
+
+        if (!response.ok) {
+          throw new Error("Saved previews could not be loaded.");
+        }
+
+        const result = (await response.json()) as {
+          generatedImages?: SavedGeneratedImage[];
+        };
+
+        if (!isMounted || !result.generatedImages?.length) {
+          return;
+        }
+
+        const savedPreviews = result.generatedImages.map((image, index) => {
+          const slotIndex = getSlotIndexFromUrl(image.image_url, index);
+
+          return {
+            style: (image.style_name ?? "Classic Oil Portrait") as PaintingStyle,
+            imageUrl: image.image_url,
+            provider: "replicate" as const,
+            providerLabel:
+              savedPreviewLabels[slotIndex] ?? "Saved Supabase preview",
+            durationSeconds: 0,
+            slotIndex,
+          };
+        });
+
+        setGeneratedPreviews(savedPreviews);
+        setSelectedPreviewSlot(savedPreviews[0]?.slotIndex);
+      } catch {
+        setPreviewError(
+          "We could not load saved previews from Supabase. Local previews may still work.",
+        );
+      }
+    }
 
     return () => {
       isMounted = false;
@@ -75,26 +133,61 @@ export function PreviewExperience() {
   }, []);
 
   function saveDraft(
-    nextDraft: Partial<{
-      style: PaintingStyle;
-      size: PaintingSize;
-      frame: FrameOption;
-    }>,
+    nextDraft: Partial<OrderDraft>,
   ) {
-    writeOrderDraft({
-      ...readOrderDraft(),
+    const currentDraft = readOrderDraft();
+    const updatedDraft = {
+      ...currentDraft,
       style: nextDraft.style ?? selectedStyle,
       size: nextDraft.size ?? selectedSize,
       frame: nextDraft.frame ?? selectedFrame,
-    });
+      selectedPreviewUrl:
+        nextDraft.selectedPreviewUrl ?? currentDraft.selectedPreviewUrl,
+    };
+
+    writeOrderDraft(updatedDraft);
+    void syncProjectSelection(updatedDraft);
+  }
+
+  async function syncProjectSelection(draft: OrderDraft) {
+    if (!draft.projectId) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/artwork-projects", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectId: draft.projectId,
+          selectedPreviewUrl: draft.selectedPreviewUrl,
+          selectedStyle: draft.style,
+          selectedSize: draft.size,
+          selectedFrame: draft.frame,
+          estimatedPrice: getEstimatedPrice(draft.size, draft.frame),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Project update failed.");
+      }
+    } catch {
+      setPreviewError(
+        "We could not save that project update. Your local selections still work.",
+      );
+    }
   }
 
   function handleReview() {
+    const currentDraft = readOrderDraft();
     writeOrderDraft({
-      ...readOrderDraft(),
+      ...currentDraft,
       style: selectedStyle,
       size: selectedSize,
       frame: selectedFrame,
+      selectedPreviewUrl: currentDraft.selectedPreviewUrl,
     });
     router.push("/review");
   }
@@ -144,7 +237,10 @@ export function PreviewExperience() {
             function selectPreview() {
               setSelectedStyle(selectionStyle);
               setSelectedPreviewSlot(generatedPreview ? index : undefined);
-              saveDraft({ style: selectionStyle });
+              saveDraft({
+                style: selectionStyle,
+                selectedPreviewUrl: generatedPreview?.imageUrl,
+              });
             }
 
             return (
@@ -198,7 +294,11 @@ export function PreviewExperience() {
                   ) : null}
                   <div className="absolute inset-x-0 bottom-0 bg-black/65 px-4 py-3 text-xs font-semibold text-white backdrop-blur">
                     {generatedPreview
-                      ? `${generatedPreview.providerLabel} - ${generatedPreview.durationSeconds}s`
+                      ? `${generatedPreview.providerLabel} - ${
+                          generatedPreview.durationSeconds > 0
+                            ? `${generatedPreview.durationSeconds}s`
+                            : "saved"
+                        }`
                       : `${modelSlots[index]} - not generated`}
                   </div>
                 </button>
@@ -336,7 +436,9 @@ export function PreviewExperience() {
                 className="max-h-[82vh] w-full object-contain"
               />
               <div className="bg-stone-950 px-5 py-3 text-sm font-semibold text-white">
-                Generated in {expandedPreview.durationSeconds}s
+                {expandedPreview.durationSeconds > 0
+                  ? `Generated in ${expandedPreview.durationSeconds}s`
+                  : "Loaded from Supabase Storage"}
               </div>
             </div>
           </div>
