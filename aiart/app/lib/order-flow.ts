@@ -1,4 +1,5 @@
 import { paintingStyles } from "@/lib/ai/styles";
+export { savedDemoProjectId } from "@/lib/ai/savedDemoProject";
 import type { PaintingPreview, PaintingStyle } from "@/lib/ai/types";
 
 export type { PaintingPreview, PaintingStyle };

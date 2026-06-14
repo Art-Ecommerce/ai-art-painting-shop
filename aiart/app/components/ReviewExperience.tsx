@@ -7,6 +7,7 @@ import {
   getEstimatedPrice,
   readPersistedProject,
   readOrderDraft,
+  savedDemoProjectId,
   writePersistedProject,
 } from "@/app/lib/order-flow";
 
@@ -36,7 +37,11 @@ export function ReviewExperience() {
         const recoveredDraft = {
           ...persistedProject,
           ...localDraft,
-          projectId: projectIdFromUrl ?? localDraft.projectId ?? persistedProject.projectId,
+          projectId:
+            projectIdFromUrl ??
+            localDraft.projectId ??
+            persistedProject.projectId ??
+            savedDemoProjectId,
           originalImageUrl:
             projectIdFromUrl && projectIdFromUrl !== localDraft.projectId
               ? persistedProject.originalImageUrl

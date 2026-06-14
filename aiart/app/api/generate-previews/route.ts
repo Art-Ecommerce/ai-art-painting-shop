@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/client";
+import { savedDemoProjectId } from "@/lib/ai/savedDemoProject";
 import type { PaintingPreview } from "@/lib/ai/types";
 import type { PaintingStyle } from "@/lib/ai/types";
 
@@ -210,6 +211,27 @@ async function loadSavedGeneratedPreviews(projectId: string) {
   });
 }
 
+async function loadSavedGeneratedPreviewsWithFallback(projectId?: string) {
+  if (projectId) {
+    const savedPreviews = await loadSavedGeneratedPreviews(projectId);
+
+    if (savedPreviews.length) {
+      return savedPreviews;
+    }
+  }
+
+  if (projectId !== savedDemoProjectId) {
+    console.info("Falling back to saved demo previews", {
+      requestedProjectId: projectId ?? null,
+      savedDemoProjectId,
+    });
+
+    return loadSavedGeneratedPreviews(savedDemoProjectId);
+  }
+
+  return [];
+}
+
 export async function POST(request: Request) {
   let body: GeneratePreviewsRequest;
 
@@ -221,7 +243,9 @@ export async function POST(request: Request) {
 
   try {
     if (body.projectId && typeof body.projectId === "string") {
-      const savedPreviews = await loadSavedGeneratedPreviews(body.projectId);
+      const savedPreviews = await loadSavedGeneratedPreviewsWithFallback(
+        body.projectId,
+      );
 
       if (savedPreviews.length) {
         return Response.json({ previews: savedPreviews });

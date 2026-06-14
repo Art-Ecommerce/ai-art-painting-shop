@@ -13,6 +13,7 @@ import {
   PaintingPreview,
   readPersistedProject,
   readOrderDraft,
+  savedDemoProjectId,
   sizes,
   styles,
   writePersistedProject,
@@ -79,7 +80,11 @@ export function PreviewExperience() {
       const recoveredDraft = {
         ...persistedProject,
         ...draft,
-        projectId: projectIdFromUrl ?? draft.projectId ?? persistedProject.projectId,
+        projectId:
+          projectIdFromUrl ??
+          draft.projectId ??
+          persistedProject.projectId ??
+          savedDemoProjectId,
         originalImageUrl:
           projectIdFromUrl && projectIdFromUrl !== draft.projectId
             ? persistedProject.originalImageUrl
@@ -128,7 +133,15 @@ export function PreviewExperience() {
           generatedImages?: SavedGeneratedImage[];
         };
 
-        if (!isMounted || !result.generatedImages?.length) {
+        if (!isMounted) {
+          return;
+        }
+
+        if (!result.generatedImages?.length) {
+          if (projectId !== savedDemoProjectId) {
+            await loadSavedPreviews(savedDemoProjectId);
+          }
+
           return;
         }
 
@@ -148,6 +161,7 @@ export function PreviewExperience() {
 
         setGeneratedPreviews(savedPreviews);
         setSelectedPreviewSlot(savedPreviews[0]?.slotIndex);
+        setPreviewError("");
       } catch {
         setPreviewError(
           "We could not load saved previews from Supabase. Local previews may still work.",
