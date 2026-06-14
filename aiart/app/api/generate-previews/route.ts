@@ -20,6 +20,32 @@ function errorResponse(message: string, status: number) {
   return Response.json({ error: message }, { status });
 }
 
+function getPublicStorageUrl(bucket: string, value: string) {
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return value;
+  }
+
+  const objectPath = value.startsWith(`${bucket}/`)
+    ? value.slice(bucket.length + 1)
+    : value.replace(/^\/+/, "");
+  const supabase = createSupabaseServerClient();
+
+  return supabase.storage.from(bucket).getPublicUrl(objectPath).data.publicUrl;
+}
+
+function logImageUrlMetadata(context: string, imageUrl: string) {
+  const url = imageUrl.startsWith("data:image/")
+    ? "[inline image omitted]"
+    : imageUrl;
+
+  console.info(context, {
+    isPublicUrl: imageUrl.startsWith("http://") || imageUrl.startsWith("https://"),
+    isInlineImage: imageUrl.startsWith("data:image/"),
+    extension: imageUrl.split("?")[0]?.split(".").pop(),
+    url,
+  });
+}
+
 function parseInlineImage(imageUrl: string) {
   const match = imageUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
 
@@ -127,12 +153,55 @@ async function loadSavedGeneratedPreviews(projectId: string) {
     throw images.error;
   }
 
-  return images.data.map((image, index) => {
-    const slotIndex = getSlotIndexFromUrl(image.image_url, index);
+  if (images.data.length) {
+    console.info("Loaded saved preview rows", {
+      projectId,
+      count: images.data.length,
+    });
+
+    return images.data.map((image, index) => {
+      const publicUrl = getPublicStorageUrl(generatedPreviewsBucket, image.image_url);
+      const slotIndex = getSlotIndexFromUrl(publicUrl, index);
+
+      logImageUrlMetadata("Loaded saved generated image", publicUrl);
+
+      return {
+        style: (image.style_name ?? "Classic Oil Portrait") as PaintingStyle,
+        imageUrl: publicUrl,
+        provider: "replicate",
+        providerLabel: savedPreviewLabels[slotIndex] ?? "Saved Supabase preview",
+        durationSeconds: 0,
+        slotIndex,
+      } satisfies PaintingPreview;
+    });
+  }
+
+  const files = await supabase.storage
+    .from(generatedPreviewsBucket)
+    .list(projectId, {
+      limit: 20,
+      sortBy: { column: "name", order: "asc" },
+    });
+
+  if (files.error) {
+    throw files.error;
+  }
+
+  console.info("Loaded saved preview files from storage fallback", {
+    projectId,
+    count: files.data.length,
+  });
+
+  return files.data.map((file, index) => {
+    const objectPath = `${projectId}/${file.name}`;
+    const publicUrl = getPublicStorageUrl(generatedPreviewsBucket, objectPath);
+    const slotIndex = getSlotIndexFromUrl(publicUrl, index);
+
+    logImageUrlMetadata("Loaded generated image from storage fallback", publicUrl);
 
     return {
-      style: (image.style_name ?? "Classic Oil Portrait") as PaintingStyle,
-      imageUrl: image.image_url,
+      style: "Classic Oil Portrait",
+      imageUrl: publicUrl,
       provider: "replicate",
       providerLabel: savedPreviewLabels[slotIndex] ?? "Saved Supabase preview",
       durationSeconds: 0,
@@ -150,29 +219,6 @@ export async function POST(request: Request) {
     return errorResponse("Invalid JSON request body.", 400);
   }
 
-  if (!body.imageDataUrl || typeof body.imageDataUrl !== "string") {
-    return errorResponse("Missing required imageDataUrl.", 400);
-  }
-
-  if (!body.imageDataUrl.startsWith("data:image/")) {
-    return errorResponse("imageDataUrl must be an image data URL.", 400);
-  }
-
-  if (body.imageDataUrl.length > maxImageDataUrlLength) {
-    return errorResponse(
-      "Image is too large for preview generation. Please upload a smaller image.",
-      413,
-    );
-  }
-
-  if (!process.env.REPLICATE_API_TOKEN) {
-    return errorResponse("AI image generation is not configured.", 500);
-  }
-
-  if (process.env.AI_PROVIDER === "gemini" && !process.env.GEMINI_API_KEY) {
-    return errorResponse("Gemini image generation is not configured.", 500);
-  }
-
   try {
     if (body.projectId && typeof body.projectId === "string") {
       const savedPreviews = await loadSavedGeneratedPreviews(body.projectId);
@@ -180,6 +226,29 @@ export async function POST(request: Request) {
       if (savedPreviews.length) {
         return Response.json({ previews: savedPreviews });
       }
+    }
+
+    if (!body.imageDataUrl || typeof body.imageDataUrl !== "string") {
+      return errorResponse("Missing required imageDataUrl.", 400);
+    }
+
+    if (!body.imageDataUrl.startsWith("data:image/")) {
+      return errorResponse("imageDataUrl must be an image data URL.", 400);
+    }
+
+    if (body.imageDataUrl.length > maxImageDataUrlLength) {
+      return errorResponse(
+        "Image is too large for preview generation. Please upload a smaller image.",
+        413,
+      );
+    }
+
+    if (!process.env.REPLICATE_API_TOKEN) {
+      return errorResponse("AI image generation is not configured.", 500);
+    }
+
+    if (process.env.AI_PROVIDER === "gemini" && !process.env.GEMINI_API_KEY) {
+      return errorResponse("Gemini image generation is not configured.", 500);
     }
 
     // Credit-saving mode: AI generation is intentionally paused.

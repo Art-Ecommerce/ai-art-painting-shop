@@ -3,9 +3,11 @@
 import { ChangeEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  clearPersistedProject,
   getStorageSafePreviews,
   PaintingPreview,
   readOrderDraft,
+  writePersistedProject,
   writeOrderDraft,
 } from "@/app/lib/order-flow";
 import { setTransientGeneratedPreviews } from "@/app/lib/transient-preview-store";
@@ -64,6 +66,10 @@ export function UploadExperience() {
         projectId: result.projectId,
         originalImageUrl: result.originalImageUrl,
       });
+      writePersistedProject({
+        projectId: result.projectId,
+        originalImageUrl: result.originalImageUrl,
+      });
     } catch {
       setError(
         "We could not save this project yet. You can keep using the local demo flow.",
@@ -94,6 +100,7 @@ export function UploadExperience() {
       }
 
       setTransientGeneratedPreviews([]);
+      clearPersistedProject();
       setError("");
       setPreview(uploadedImage);
       // TODO: Store the original photo and draft metadata in Supabase.

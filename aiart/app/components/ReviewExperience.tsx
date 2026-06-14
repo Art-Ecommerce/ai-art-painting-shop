@@ -5,7 +5,9 @@ import { useEffect, useState } from "react";
 import {
   OrderDraft,
   getEstimatedPrice,
+  readPersistedProject,
   readOrderDraft,
+  writePersistedProject,
 } from "@/app/lib/order-flow";
 
 type SavedArtworkProject = {
@@ -27,10 +29,28 @@ export function ReviewExperience() {
     queueMicrotask(() => {
       if (isMounted) {
         const localDraft = readOrderDraft();
-        setDraft(localDraft);
+        const persistedProject = readPersistedProject();
+        const projectIdFromUrl = new URLSearchParams(window.location.search).get(
+          "projectId",
+        );
+        const recoveredDraft = {
+          ...persistedProject,
+          ...localDraft,
+          projectId: projectIdFromUrl ?? localDraft.projectId ?? persistedProject.projectId,
+          originalImageUrl:
+            projectIdFromUrl && projectIdFromUrl !== localDraft.projectId
+              ? persistedProject.originalImageUrl
+              : localDraft.originalImageUrl ?? persistedProject.originalImageUrl,
+          selectedPreviewUrl:
+            projectIdFromUrl && projectIdFromUrl !== localDraft.projectId
+              ? persistedProject.selectedPreviewUrl
+              : localDraft.selectedPreviewUrl ?? persistedProject.selectedPreviewUrl,
+        };
 
-        if (localDraft.projectId) {
-          void loadSavedProject(localDraft.projectId, localDraft);
+        setDraft(recoveredDraft);
+
+        if (recoveredDraft.projectId) {
+          void loadSavedProject(recoveredDraft.projectId, recoveredDraft);
         }
       }
     });
@@ -51,7 +71,7 @@ export function ReviewExperience() {
           return;
         }
 
-        setDraft({
+        const savedDraft = {
           ...localDraft,
           originalImageUrl:
             result.project.original_image_url ?? localDraft.originalImageUrl,
@@ -66,6 +86,16 @@ export function ReviewExperience() {
           frame: (result.project.selected_frame ?? localDraft.frame) as
             | OrderDraft["frame"]
             | undefined,
+        };
+
+        setDraft(savedDraft);
+        writePersistedProject({
+          projectId: savedDraft.projectId,
+          originalImageUrl: savedDraft.originalImageUrl,
+          selectedPreviewUrl: savedDraft.selectedPreviewUrl,
+          style: savedDraft.style,
+          size: savedDraft.size,
+          frame: savedDraft.frame,
         });
       } catch {
         // Keep local review flow working if Supabase is unavailable.

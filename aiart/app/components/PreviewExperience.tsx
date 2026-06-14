@@ -11,9 +11,11 @@ import {
   frames,
   getEstimatedPrice,
   PaintingPreview,
+  readPersistedProject,
   readOrderDraft,
   sizes,
   styles,
+  writePersistedProject,
   writeOrderDraft,
 } from "@/app/lib/order-flow";
 import { getTransientGeneratedPreviews } from "@/app/lib/transient-preview-store";
@@ -70,21 +72,47 @@ export function PreviewExperience() {
       }
 
       const draft = readOrderDraft();
+      const persistedProject = readPersistedProject();
+      const projectIdFromUrl = new URLSearchParams(window.location.search).get(
+        "projectId",
+      );
+      const recoveredDraft = {
+        ...persistedProject,
+        ...draft,
+        projectId: projectIdFromUrl ?? draft.projectId ?? persistedProject.projectId,
+        originalImageUrl:
+          projectIdFromUrl && projectIdFromUrl !== draft.projectId
+            ? persistedProject.originalImageUrl
+            : draft.originalImageUrl ?? persistedProject.originalImageUrl,
+        selectedPreviewUrl:
+          projectIdFromUrl && projectIdFromUrl !== draft.projectId
+            ? persistedProject.selectedPreviewUrl
+            : draft.selectedPreviewUrl ?? persistedProject.selectedPreviewUrl,
+      };
       const transientPreviews = getTransientGeneratedPreviews();
       const availablePreviews = transientPreviews.length
         ? transientPreviews
-        : draft.generatedPreviews ?? [];
+        : recoveredDraft.generatedPreviews ?? [];
 
-      setUploadedImage(draft.uploadedImage ?? "");
-      setSelectedStyle(draft.style ?? "Classic Oil Portrait");
-      setSelectedSize(draft.size ?? "12x16");
-      setSelectedFrame(draft.frame ?? "No frame");
+      setUploadedImage(recoveredDraft.uploadedImage ?? "");
+      setSelectedStyle(recoveredDraft.style ?? "Classic Oil Portrait");
+      setSelectedSize(recoveredDraft.size ?? "12x16");
+      setSelectedFrame(recoveredDraft.frame ?? "No frame");
       setGeneratedPreviews(availablePreviews);
-      setPreviewError(draft.previewError ?? "");
+      setPreviewError(projectIdFromUrl ? "" : recoveredDraft.previewError ?? "");
       setSelectedPreviewSlot(availablePreviews[0]?.slotIndex);
 
-      if (!transientPreviews.length && draft.projectId) {
-        void loadSavedPreviews(draft.projectId);
+      if (!transientPreviews.length && recoveredDraft.projectId) {
+        writeOrderDraft(recoveredDraft);
+        writePersistedProject({
+          projectId: recoveredDraft.projectId,
+          originalImageUrl: recoveredDraft.originalImageUrl,
+          selectedPreviewUrl: recoveredDraft.selectedPreviewUrl,
+          style: recoveredDraft.style,
+          size: recoveredDraft.size,
+          frame: recoveredDraft.frame,
+        });
+        void loadSavedPreviews(recoveredDraft.projectId);
       }
     });
 
@@ -146,6 +174,14 @@ export function PreviewExperience() {
     };
 
     writeOrderDraft(updatedDraft);
+    writePersistedProject({
+      projectId: updatedDraft.projectId,
+      originalImageUrl: updatedDraft.originalImageUrl,
+      selectedPreviewUrl: updatedDraft.selectedPreviewUrl,
+      style: updatedDraft.style,
+      size: updatedDraft.size,
+      frame: updatedDraft.frame,
+    });
     void syncProjectSelection(updatedDraft);
   }
 

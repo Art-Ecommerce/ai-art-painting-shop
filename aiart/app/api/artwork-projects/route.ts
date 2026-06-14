@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from "@/lib/supabase/client";
 
 const customerUploadsBucket = "customer-uploads";
+const generatedPreviewsBucket = "generated-previews";
 
 type CreateProjectRequest = {
   imageDataUrl?: unknown;
@@ -17,6 +18,37 @@ type UpdateProjectRequest = {
 
 function errorResponse(message: string, status: number) {
   return Response.json({ error: message }, { status });
+}
+
+function getPublicStorageUrl(bucket: string, value?: string | null) {
+  if (!value) {
+    return value;
+  }
+
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    return value;
+  }
+
+  const objectPath = value.startsWith(`${bucket}/`)
+    ? value.slice(bucket.length + 1)
+    : value.replace(/^\/+/, "");
+  const supabase = createSupabaseServerClient();
+
+  return supabase.storage.from(bucket).getPublicUrl(objectPath).data.publicUrl;
+}
+
+function logImageUrlMetadata(context: string, imageUrl?: string | null) {
+  if (!imageUrl) {
+    console.info(context, { hasImageUrl: false });
+    return;
+  }
+
+  console.info(context, {
+    hasImageUrl: true,
+    isPublicUrl: imageUrl.startsWith("http://") || imageUrl.startsWith("https://"),
+    extension: imageUrl.split("?")[0]?.split(".").pop(),
+    url: imageUrl,
+  });
 }
 
 function parseImageDataUrl(imageDataUrl: string) {
@@ -120,13 +152,14 @@ export async function PATCH(request: Request) {
 
   try {
     const supabase = createSupabaseServerClient();
+    const selectedPreviewUrl =
+      typeof body.selectedPreviewUrl === "string"
+        ? getPublicStorageUrl(generatedPreviewsBucket, body.selectedPreviewUrl)
+        : undefined;
     const update = await supabase
       .from("artwork_projects")
       .update({
-        selected_preview_url:
-          typeof body.selectedPreviewUrl === "string"
-            ? body.selectedPreviewUrl
-            : undefined,
+        selected_preview_url: selectedPreviewUrl,
         selected_style:
           typeof body.selectedStyle === "string" ? body.selectedStyle : undefined,
         selected_size:
@@ -143,7 +176,7 @@ export async function PATCH(request: Request) {
       throw update.error;
     }
 
-    if (typeof body.selectedPreviewUrl === "string") {
+    if (selectedPreviewUrl) {
       await supabase
         .from("generated_images")
         .update({ selected: false })
@@ -152,7 +185,7 @@ export async function PATCH(request: Request) {
         .from("generated_images")
         .update({ selected: true })
         .eq("project_id", body.projectId)
-        .eq("image_url", body.selectedPreviewUrl);
+        .eq("image_url", selectedPreviewUrl);
     }
 
     // TODO: Add Shopify checkout after this project update succeeds.
@@ -198,9 +231,67 @@ export async function GET(request: Request) {
       throw images.error;
     }
 
+    const normalizedProject = {
+      ...project.data,
+      original_image_url: getPublicStorageUrl(
+        customerUploadsBucket,
+        project.data.original_image_url,
+      ),
+      selected_preview_url: getPublicStorageUrl(
+        generatedPreviewsBucket,
+        project.data.selected_preview_url,
+      ),
+    };
+    let normalizedImages = images.data.map((image) => ({
+      ...image,
+      image_url: getPublicStorageUrl(generatedPreviewsBucket, image.image_url),
+    }));
+
+    if (!normalizedImages.length) {
+      const files = await supabase.storage
+        .from(generatedPreviewsBucket)
+        .list(projectId, {
+          limit: 20,
+          sortBy: { column: "name", order: "asc" },
+        });
+
+      if (files.error) {
+        throw files.error;
+      }
+
+      normalizedImages = files.data.map((file) => ({
+        id: file.id ?? file.name,
+        project_id: projectId,
+        image_url: getPublicStorageUrl(
+          generatedPreviewsBucket,
+          `${projectId}/${file.name}`,
+        ),
+        style_name: "Classic Oil Portrait",
+        selected: false,
+        created_at: file.created_at ?? null,
+      }));
+    }
+
+    logImageUrlMetadata(
+      "Loaded artwork original image",
+      normalizedProject.original_image_url,
+    );
+    logImageUrlMetadata(
+      "Loaded artwork selected preview",
+      normalizedProject.selected_preview_url,
+    );
+    console.info("Loaded artwork generated images", {
+      projectId,
+      count: normalizedImages.length,
+      imageUrlKinds: normalizedImages.map((image) => ({
+        isPublicUrl: image.image_url?.startsWith("http"),
+        extension: image.image_url?.split("?")[0]?.split(".").pop(),
+      })),
+    });
+
     return Response.json({
-      project: project.data,
-      generatedImages: images.data,
+      project: normalizedProject,
+      generatedImages: normalizedImages,
     });
   } catch (error) {
     console.error("Failed to load artwork project", {

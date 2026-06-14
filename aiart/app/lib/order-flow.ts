@@ -20,6 +20,17 @@ export type OrderDraft = {
 };
 
 export const orderDraftKey = "atelier-ai-order-draft";
+export const persistedProjectKey = "atelier-ai-last-project";
+
+export type PersistedProject = Pick<
+  OrderDraft,
+  | "projectId"
+  | "originalImageUrl"
+  | "selectedPreviewUrl"
+  | "style"
+  | "size"
+  | "frame"
+>;
 
 export const styles: PaintingStyle[] = paintingStyles;
 
@@ -67,6 +78,40 @@ export function readOrderDraft(): OrderDraft {
 
 export function writeOrderDraft(draft: OrderDraft) {
   window.sessionStorage.setItem(orderDraftKey, JSON.stringify(draft));
+}
+
+export function readPersistedProject(): PersistedProject {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  const rawProject = window.localStorage.getItem(persistedProjectKey);
+
+  if (!rawProject) {
+    return {};
+  }
+
+  try {
+    return JSON.parse(rawProject) as PersistedProject;
+  } catch {
+    return {};
+  }
+}
+
+export function writePersistedProject(project: PersistedProject) {
+  if (!project.projectId) {
+    return;
+  }
+
+  window.localStorage.setItem(persistedProjectKey, JSON.stringify(project));
+}
+
+export function clearPersistedProject() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(persistedProjectKey);
 }
 
 export function isLargeInlineImage(imageUrl: string) {
