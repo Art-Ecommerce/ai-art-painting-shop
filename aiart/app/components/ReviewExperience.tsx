@@ -23,6 +23,8 @@ type SavedArtworkProject = {
 
 export function ReviewExperience() {
   const [draft, setDraft] = useState<OrderDraft>({});
+  const [checkoutError, setCheckoutError] = useState("");
+  const [isStartingCheckout, setIsStartingCheckout] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -116,6 +118,56 @@ export function ReviewExperience() {
   const reviewImageUrl =
     draft.selectedPreviewUrl ?? draft.originalImageUrl ?? draft.uploadedImage;
 
+  async function handleCheckout() {
+    const selectedStyle = draft.style ?? "Classic Oil Portrait";
+    const selectedSize = draft.size ?? "12x16";
+    const selectedFrame = draft.frame ?? "No frame";
+    const selectedPreviewUrl = draft.selectedPreviewUrl ?? reviewImageUrl;
+
+    if (!draft.projectId || !selectedPreviewUrl) {
+      setCheckoutError(
+        "This project is missing artwork details. Please return to preview and select an image.",
+      );
+      return;
+    }
+
+    setCheckoutError("");
+    setIsStartingCheckout(true);
+
+    try {
+      const response = await fetch("/api/shopify/create-checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          projectId: draft.projectId,
+          selectedStyle,
+          selectedSize,
+          selectedFrame,
+          selectedPreviewUrl,
+        }),
+      });
+      const result = (await response.json()) as {
+        checkoutUrl?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !result.checkoutUrl) {
+        throw new Error(result.error ?? "Checkout could not be started.");
+      }
+
+      window.location.href = result.checkoutUrl;
+    } catch (error) {
+      setCheckoutError(
+        error instanceof Error
+          ? error.message
+          : "Checkout could not be started. Please try again.",
+      );
+      setIsStartingCheckout(false);
+    }
+  }
+
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <section className="rounded-lg bg-stone-950 p-4 shadow-xl">
@@ -184,9 +236,11 @@ export function ReviewExperience() {
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
+            onClick={handleCheckout}
+            disabled={isStartingCheckout}
             className="inline-flex flex-1 items-center justify-center rounded-full bg-stone-950 px-7 py-4 font-semibold text-white transition hover:bg-stone-800"
           >
-            Continue to checkout
+            {isStartingCheckout ? "Starting checkout..." : "Continue to checkout"}
           </button>
           <Link
             href="/preview"
@@ -195,7 +249,12 @@ export function ReviewExperience() {
             Edit selections
           </Link>
         </div>
-        {/* TODO: Replace the checkout button with Shopify checkout creation. */}
+        {checkoutError ? (
+          <p className="mt-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+            {checkoutError}
+          </p>
+        ) : null}
+        {/* TODO: Add Shopify order-created webhook and production artist workflow after checkout is paid. */}
       </section>
     </div>
   );
