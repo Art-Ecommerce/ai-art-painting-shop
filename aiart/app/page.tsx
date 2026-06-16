@@ -1,16 +1,40 @@
-import Link from "next/link";
+"use client";
 
-const paintingPreviewUrl =
-  "https://belnvfsaytwprbknuszz.supabase.co/storage/v1/object/public/generated-previews/ca9496aa-3ac1-41e9-95ac-314e759384d5/0-d333f97f-93a6-4946-b28f-4b794ad0867f.webp";
+import { useState } from "react";
+import Link from "next/link";
 
 const sourcePhotoUrl =
   "https://belnvfsaytwprbknuszz.supabase.co/storage/v1/object/public/customer-uploads/originals/9ab41cbc-1520-4020-a28f-f06b94f153f6.png";
 
-const styles = ["Classic Oil", "Impressionist", "Modern Minimal", "Warm & Painterly"];
+const styles = [
+  {
+    name: "Classic Oil",
+    imageUrl:
+      "https://belnvfsaytwprbknuszz.supabase.co/storage/v1/object/public/generated-previews/ca9496aa-3ac1-41e9-95ac-314e759384d5/0-d333f97f-93a6-4946-b28f-4b794ad0867f.webp",
+  },
+  {
+    name: "Impressionist",
+    imageUrl:
+      "https://belnvfsaytwprbknuszz.supabase.co/storage/v1/object/public/generated-previews/ca9496aa-3ac1-41e9-95ac-314e759384d5/2-91594503-4c1e-4377-a165-6e8da61f845b.png",
+  },
+  {
+    name: "Warm Vintage",
+    imageUrl:
+      "https://belnvfsaytwprbknuszz.supabase.co/storage/v1/object/public/generated-previews/ca9496aa-3ac1-41e9-95ac-314e759384d5/1-54a5003d-6f7f-4c96-bec1-026fe3c5550a.jpg",
+  },
+  {
+    name: "Royal Portrait",
+    imageUrl:
+      "https://belnvfsaytwprbknuszz.supabase.co/storage/v1/object/public/generated-previews/ca9496aa-3ac1-41e9-95ac-314e759384d5/3-555940b1-58a8-468a-a5ae-9fb987eab945.jpg",
+  },
+];
 
 const processLinks = ["Process", "Styles", "Materials", "Reviews"];
 
 export default function Home() {
+  const [selectedStyleIndex, setSelectedStyleIndex] = useState(0);
+  const selectedStyle = styles[selectedStyleIndex];
+
   return (
     <main className="min-h-screen overflow-hidden bg-[#f5efe6] text-[#271f18]">
       <nav className="relative z-20 border-b border-[#2a2017]/10 bg-[#f7f1e8]/90 backdrop-blur">
@@ -33,7 +57,7 @@ export default function Home() {
               aria-label="Account"
               className="hidden h-9 w-9 items-center justify-center rounded-full text-[#51483f] transition hover:bg-white/70 sm:inline-flex"
             >
-              <span className="text-lg leading-none">⌘</span>
+              <span className="text-lg leading-none">◎</span>
             </Link>
             <Link
               href="/create"
@@ -115,31 +139,28 @@ export default function Home() {
               <div className="aspect-[4/5] overflow-hidden bg-[#2c3131]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={paintingPreviewUrl}
-                  alt="Classic oil portrait preview"
+                  src={selectedStyle.imageUrl}
+                  alt={`${selectedStyle.name} portrait preview`}
                   className="h-full w-full object-cover"
                 />
               </div>
             </div>
           </div>
 
-          <div className="absolute left-[21%] top-[41%] z-30 flex h-20 w-20 items-center justify-center rounded-full bg-[#2d2925]/62 text-white shadow-xl backdrop-blur">
-            <span className="ml-1 text-4xl leading-none">▶</span>
-          </div>
-
           <div id="styles" className="absolute bottom-0 right-0 z-30 hidden w-[72%] grid-cols-4 gap-2 px-2 pb-4 lg:grid">
             {styles.map((style, index) => (
-              <Link
-                key={style}
-                href="/preview"
+              <button
+                type="button"
+                key={style.name}
+                onClick={() => setSelectedStyleIndex(index)}
                 className={`flex h-11 items-center justify-center border border-white/35 px-4 text-sm font-semibold shadow-sm backdrop-blur transition hover:bg-[#2c2119] hover:text-white ${
-                  index === 0
+                  index === selectedStyleIndex
                     ? "bg-[#2c2119] text-white"
                     : "bg-white/52 text-[#65584e]"
                 }`}
               >
-                {style}
-              </Link>
+                {style.name}
+              </button>
             ))}
           </div>
         </div>
