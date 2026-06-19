@@ -26,30 +26,35 @@ const styleCards = [
   {
     name: "Classic Oil",
     style: "Classic Oil Portrait",
+    testId: "style-option-classic-oil-portrait",
     imageUrl:
       "https://belnvfsaytwprbknuszz.supabase.co/storage/v1/object/public/generated-previews/ca9496aa-3ac1-41e9-95ac-314e759384d5/0-d333f97f-93a6-4946-b28f-4b794ad0867f.webp",
   },
   {
     name: "Impressionist",
     style: "Impressionist Oil Painting",
+    testId: "style-option-impressionist-oil-painting",
     imageUrl:
       "https://belnvfsaytwprbknuszz.supabase.co/storage/v1/object/public/generated-previews/ca9496aa-3ac1-41e9-95ac-314e759384d5/2-91594503-4c1e-4377-a165-6e8da61f845b.png",
   },
   {
     name: "Warm Vintage",
     style: "Warm Vintage Oil Painting",
+    testId: "style-option-warm-vintage-oil-painting",
     imageUrl:
       "https://belnvfsaytwprbknuszz.supabase.co/storage/v1/object/public/generated-previews/ca9496aa-3ac1-41e9-95ac-314e759384d5/1-54a5003d-6f7f-4c96-bec1-026fe3c5550a.jpg",
   },
   {
     name: "Royal Portrait",
     style: "Royal Portrait",
+    testId: "style-option-royal-portrait",
     imageUrl:
       "https://belnvfsaytwprbknuszz.supabase.co/storage/v1/object/public/generated-previews/ca9496aa-3ac1-41e9-95ac-314e759384d5/3-555940b1-58a8-468a-a5ae-9fb987eab945.jpg",
   },
 ] satisfies {
   name: string;
   style: PaintingStyle;
+  testId: string;
   imageUrl: string;
 }[];
 
@@ -373,6 +378,7 @@ export function UploadExperience() {
               <input
                 type="file"
                 accept="image/*"
+                data-testid="upload-input"
                 className="sr-only"
                 onChange={handleImageChange}
               />
@@ -407,6 +413,7 @@ export function UploadExperience() {
                 <button
                   type="button"
                   key={style.name}
+                  data-testid={style.testId}
                   onClick={() => {
                     setSelectedPreviewSlot(index);
                     setSelectedStyle(styleName);
@@ -454,6 +461,7 @@ export function UploadExperience() {
               <button
                 type="button"
                 key={size}
+                data-testid={`size-option-${size}`}
                 onClick={() => {
                   setSelectedSize(size);
                   saveSelection({ size });
@@ -479,6 +487,9 @@ export function UploadExperience() {
               <button
                 type="button"
                 key={frame}
+                data-testid={`frame-option-${frame
+                  .toLowerCase()
+                  .replaceAll(" ", "-")}`}
                 onClick={() => {
                   setSelectedFrame(frame);
                   saveSelection({ frame });
@@ -507,6 +518,7 @@ export function UploadExperience() {
         <button
           type="button"
           onClick={handleGeneratePreviews}
+          data-testid="generate-previews-button"
           disabled={!preview || isGenerating || isSavingProject}
           className="mt-7 flex h-14 w-full items-center justify-center bg-[#2d241e] px-5 text-sm font-bold uppercase tracking-[0.2em] text-white transition hover:bg-[#4b392d] disabled:cursor-not-allowed disabled:bg-[#cfc6bc]"
         >
@@ -521,6 +533,7 @@ export function UploadExperience() {
           <button
             type="button"
             onClick={() => router.push("/review")}
+            data-testid="review-order-button"
             className="mt-3 flex h-14 w-full items-center justify-center border border-[#2d241e] bg-white px-5 text-sm font-bold uppercase tracking-[0.2em] text-[#2d241e] transition hover:bg-[#f8f3eb]"
           >
             Review Order

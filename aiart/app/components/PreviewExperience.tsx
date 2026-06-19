@@ -355,6 +355,9 @@ export function PreviewExperience() {
                 <button
                   type="button"
                   onClick={selectPreview}
+                  data-testid={`style-option-${style
+                    .toLowerCase()
+                    .replaceAll(" ", "-")}`}
                   className="flex w-full items-center justify-between gap-4 p-5 text-left"
                 >
                   <div>
@@ -394,6 +397,7 @@ export function PreviewExperience() {
               <button
                 type="button"
                 key={size}
+                data-testid={`size-option-${size}`}
                 onClick={() => {
                   setSelectedSize(size);
                   saveDraft({ size });
@@ -417,6 +421,9 @@ export function PreviewExperience() {
               <button
                 type="button"
                 key={frame}
+                data-testid={`frame-option-${frame
+                  .toLowerCase()
+                  .replaceAll(" ", "-")}`}
                 onClick={() => {
                   setSelectedFrame(frame);
                   saveDraft({ frame });
@@ -443,6 +450,7 @@ export function PreviewExperience() {
         <button
           type="button"
           onClick={handleReview}
+          data-testid="review-order-button"
           className="mt-5 w-full rounded-full bg-amber-800 px-6 py-4 font-semibold text-white transition hover:bg-amber-700"
         >
           Review order

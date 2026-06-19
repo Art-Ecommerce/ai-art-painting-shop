@@ -20,10 +20,15 @@ export const shopifyVariantByConfiguration: Record<ShopifyVariantKey, string> = 
 };
 
 export function getShopifyVariantId(
-  selectedSize: PaintingSize,
-  selectedFrame: FrameOption,
+  selectedSize: string,
+  selectedFrame: string,
 ) {
-  const key: ShopifyVariantKey = `${selectedSize}|${selectedFrame}`;
+  const key = `${selectedSize}|${selectedFrame}` as ShopifyVariantKey;
+  const variantId = shopifyVariantByConfiguration[key];
 
-  return shopifyVariantByConfiguration[key];
+  if (!variantId) {
+    throw new Error(`No Shopify variant configured for "${key}".`);
+  }
+
+  return variantId;
 }

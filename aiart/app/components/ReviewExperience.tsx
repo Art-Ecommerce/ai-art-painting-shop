@@ -237,6 +237,7 @@ export function ReviewExperience() {
           <button
             type="button"
             onClick={handleCheckout}
+            data-testid="checkout-button"
             disabled={isStartingCheckout}
             className="inline-flex flex-1 items-center justify-center rounded-full bg-stone-950 px-7 py-4 font-semibold text-white transition hover:bg-stone-800"
           >
