@@ -87,7 +87,7 @@ test("uploads a photo and reviews the selected painting configuration", async ({
     route.fulfill({
       contentType: "application/json",
       body: JSON.stringify({
-        checkoutUrl: "http://127.0.0.1:3100/mock-checkout",
+        checkoutUrl: "http://127.0.0.1:3200/mock-checkout",
       }),
     }),
   );
