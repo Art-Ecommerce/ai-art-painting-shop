@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "prepare": "husky",
+    "prepare": "cd .. && husky aiart/.husky",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:e2e": "playwright test",
